@@ -32,8 +32,8 @@ init_db()
 # -----------------------------
 # Home Page
 # -----------------------------
-@app.route('/')
-def index():
+@app.route('/login')
+def login():
     return render_template('vitalguard.html')
 
 
