@@ -2,10 +2,15 @@ from flask import Flask, render_template, request, redirect, session, url_for
 import sqlite3
 import os
 
-app = Flask(__name__)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+app = Flask(
+    __name__,
+    template_folder=os.path.join(BASE_DIR, "templates")
+)
 app.secret_key = "supersecretkey"
 
-DATABASE = "users.db"
+DATABASE = os.path.join(BASE_DIR, "users.db")
 
 
 # -----------------------------
@@ -30,40 +35,15 @@ init_db()
 
 
 # -----------------------------
-# Home Page
+# Home / Login Page (GET)
 # -----------------------------
-@app.route('/login')
-def login():
+@app.route('/')
+def index():
     return render_template('vitalguard.html')
 
 
 # -----------------------------
-# Register Route
-# -----------------------------
-@app.route('/register', methods=['POST'])
-def register():
-    name = request.form['name']
-    email = request.form['email']
-    password = request.form['password']
-
-    try:
-        conn = sqlite3.connect(DATABASE)
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
-            (name, email, password)
-        )
-        conn.commit()
-        conn.close()
-
-        return redirect(url_for('index'))
-
-    except sqlite3.IntegrityError:
-        return "Email already exists. Please go back and try again."
-
-
-# -----------------------------
-# Login Route
+# Login (POST)
 # -----------------------------
 @app.route('/login', methods=['POST'])
 def login():
@@ -88,7 +68,31 @@ def login():
 
 
 # -----------------------------
-# Dashboard (After Login)
+# Register (POST)
+# -----------------------------
+@app.route('/register', methods=['POST'])
+def register():
+    name = request.form['name']
+    email = request.form['email']
+    password = request.form['password']
+
+    try:
+        conn = sqlite3.connect(DATABASE)
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
+            (name, email, password)
+        )
+        conn.commit()
+        conn.close()
+        return redirect(url_for('index'))
+
+    except sqlite3.IntegrityError:
+        return "Email already exists. Please go back and try again."
+
+
+# -----------------------------
+# Dashboard
 # -----------------------------
 @app.route('/dashboard')
 def dashboard():
@@ -109,10 +113,3 @@ def dashboard():
 def logout():
     session.clear()
     return redirect(url_for('index'))
-
-
-# -----------------------------
-# Run App
-# -----------------------------
-if __name__ == '__main__':
-    app.run(debug=True)
