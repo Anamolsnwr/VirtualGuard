@@ -64,10 +64,7 @@ def login():
 
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
-    cursor.execute(
-        "SELECT * FROM users WHERE email = ?",
-        (email,)
-    )
+    cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
     user = cursor.fetchone()
     conn.close()
 
@@ -77,8 +74,6 @@ def login():
         return redirect(url_for('dashboard'))
     else:
         return "Invalid email or password."
-
-
 
 # -----------------------------
 # Register (POST)
