@@ -1,6 +1,9 @@
 from flask import Flask, render_template, request, redirect, session, url_for
 import sqlite3
 import os
+from werkzeug.security import generate_password_hash, check_password_hash
+from functools import wraps
+
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -8,7 +11,8 @@ app = Flask(
     __name__,
     template_folder=os.path.join(BASE_DIR, "templates")
 )
-app.secret_key = "supersecretkey"
+app.secret_key = os.environ.get("SECRET_KEY", "dev_key")
+
 
 DATABASE = os.path.join(BASE_DIR, "users.db")
 
@@ -32,6 +36,14 @@ def init_db():
 
 
 init_db()
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('index'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 
 
 # -----------------------------
@@ -53,18 +65,19 @@ def login():
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
     cursor.execute(
-        "SELECT * FROM users WHERE email = ? AND password = ?",
-        (email, password)
+        "SELECT * FROM users WHERE email = ?",
+        (email,)
     )
     user = cursor.fetchone()
     conn.close()
 
-    if user:
+    if user and check_password_hash(user[3], password):
         session['user_id'] = user[0]
         session['user_name'] = user[1]
         return redirect(url_for('dashboard'))
     else:
         return "Invalid email or password."
+
 
 
 # -----------------------------
@@ -74,7 +87,7 @@ def login():
 def register():
     name = request.form['name']
     email = request.form['email']
-    password = request.form['password']
+    password = generate_password_hash(request.form['password'])
 
     try:
         conn = sqlite3.connect(DATABASE)
@@ -88,13 +101,22 @@ def register():
         return redirect(url_for('index'))
 
     except sqlite3.IntegrityError:
-        return "Email already exists. Please go back and try again."
+        return "Email already exists."
+
 
 
 # -----------------------------
 # Dashboard
 # -----------------------------
 @app.route('/dashboard')
+@login_required
+def dashboard():
+    return f"""
+    <h1>Welcome {session['user_name']}!</h1>
+    <p>Your VitalGuard system is connected.</p>
+    <a href='/logout'>Logout</a>
+    """
+
 def dashboard():
     if 'user_id' in session:
         return f"""
