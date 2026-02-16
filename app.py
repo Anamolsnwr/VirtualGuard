@@ -84,7 +84,7 @@ def create_alerts(pid, hr, spo2, temp, fall, sos):
 # ─── Auth ──────────────────────────────────────────────────────────────────────
 @app.route('/')
 def index():
-    return redirect(url_for('dashboard') if 'user_id' in session else url_for('login'))
+    return render_template('vitalguard.html')
 
 # ── POST /register ─────────────────────────────────────────────────────────────
 @app.route('/register', methods=['POST'])
