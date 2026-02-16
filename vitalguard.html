@@ -1,0 +1,1702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VitalGuard – IoT Healthcare Monitor</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --primary: #0a74da;
+  --primary-dark: #0557a8;
+  --primary-light: #e8f2fd;
+  --success: #00b894;
+  --warning: #f39c12;
+  --danger: #e74c3c;
+  --critical: #c0392b;
+  --sidebar-w: 240px;
+  --header-h: 64px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f0f4f8; color: #2d3748; }
+
+/* ── Login ─────────────────────────────────────────────────────────────── */
+#loginScreen {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0557a8 0%, #0a74da 50%, #38b2ff 100%);
+  display: flex; align-items: center; justify-content: center;
+}
+.login-card {
+  background: #fff; border-radius: 20px; padding: 44px 40px;
+  width: 420px; max-width: 95vw;
+  box-shadow: 0 20px 60px rgba(5,87,168,.25);
+}
+.login-logo { text-align: center; margin-bottom: 28px; }
+.login-logo .shield { font-size: 52px; color: var(--primary); }
+.login-logo h1 { font-size: 26px; font-weight: 700; color: #1a202c; }
+.login-logo p { color: #718096; font-size: 13px; }
+.role-tabs { display: flex; border-radius: 10px; overflow: hidden; border: 2px solid #e2e8f0; margin-bottom: 24px; }
+.role-tab {
+  flex: 1; padding: 10px; text-align: center; cursor: pointer;
+  font-weight: 600; font-size: 14px; color: #718096; transition: all .2s;
+}
+.role-tab.active { background: var(--primary); color: #fff; }
+.form-control-vg {
+  width: 100%; padding: 12px 16px; border: 2px solid #e2e8f0;
+  border-radius: 10px; font-size: 14px; outline: none; transition: border .2s; margin-bottom: 14px;
+}
+.form-control-vg:focus { border-color: var(--primary); }
+.btn-login {
+  width: 100%; padding: 13px; background: var(--primary); color: #fff;
+  border: none; border-radius: 10px; font-size: 15px; font-weight: 600;
+  cursor: pointer; transition: background .2s;
+}
+.btn-login:hover { background: var(--primary-dark); }
+.login-hint { text-align: center; margin-top: 16px; font-size: 12px; color: #a0aec0; }
+
+/* ── Auth mode tabs (Login / Register) ─────────────────────────────────── */
+.auth-tabs { display: flex; border-radius: 12px; overflow: hidden; background: #f0f4f8; padding: 4px; margin-bottom: 22px; gap: 4px; }
+.auth-tab { flex: 1; padding: 9px; text-align: center; cursor: pointer; font-weight: 700; font-size: 14px; color: #718096; border-radius: 8px; transition: all .2s; user-select: none; }
+.auth-tab.active { background: #fff; color: var(--primary); box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+.auth-form { display: none; }
+.auth-form.active { display: block; }
+.input-wrap { position: relative; margin-bottom: 14px; }
+.input-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #a0aec0; font-size: 13px; pointer-events: none; }
+.input-wrap .form-control-vg { padding-left: 38px; margin-bottom: 0; }
+.pass-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #a0aec0; cursor: pointer; font-size: 14px; }
+.pass-toggle:hover { color: var(--primary); }
+.form-msg { font-size: 12px; font-weight: 600; margin-bottom: 12px; padding: 9px 12px; border-radius: 8px; display: none; align-items: center; gap: 8px; }
+.form-msg.error { display: flex; background: #fdf2f2; color: var(--danger); }
+.form-msg.success { display: flex; background: #e6f9f4; color: var(--success); }
+.btn-login { width: 100%; padding: 13px; background: var(--primary); color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; transition: background .2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.btn-login:hover { background: var(--primary-dark); }
+.btn-login.busy { opacity: .75; pointer-events: none; }
+.spinner-sm { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.35); border-top-color: #fff; border-radius: 50%; animation: spin .65s linear infinite; display: none; }
+.btn-login.busy .spinner-sm { display: inline-block; }
+.btn-login.busy .btn-txt { display: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.strength-bar { height: 4px; border-radius: 2px; background: #e2e8f0; margin: 4px 0 2px; }
+.strength-fill { height: 100%; border-radius: 2px; transition: width .3s, background .3s; width: 0; }
+.strength-label { font-size: 11px; font-weight: 700; }
+.remember-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; font-size: 13px; }
+.remember-row label { display: flex; align-items: center; gap: 8px; color: #4a5568; cursor: pointer; }
+.remember-row input[type=checkbox] { accent-color: var(--primary); }
+.role-tabs { display: flex; border-radius: 10px; overflow: hidden; border: 2px solid #e2e8f0; margin-bottom: 18px; }
+.role-tab { flex: 1; padding: 9px; text-align: center; cursor: pointer; font-weight: 600; font-size: 13px; color: #718096; transition: all .2s; }
+.role-tab.active { background: var(--primary); color: #fff; }
+
+/* ── App Shell ─────────────────────────────────────────────────────────── */
+#appShell { display: none; min-height: 100vh; }
+
+/* Sidebar */
+.sidebar {
+  position: fixed; left: 0; top: 0; bottom: 0;
+  width: var(--sidebar-w); background: #fff;
+  box-shadow: 2px 0 12px rgba(0,0,0,.06); z-index: 200;
+  display: flex; flex-direction: column; transition: transform .3s;
+}
+.sidebar-brand {
+  padding: 20px 20px 16px; display: flex; align-items: center; gap: 10px;
+  border-bottom: 1px solid #e8f0fe;
+}
+.sidebar-brand .shield-sm { font-size: 28px; color: var(--primary); }
+.sidebar-brand span { font-size: 20px; font-weight: 700; color: #1a202c; }
+.sidebar-brand span em { color: var(--primary); font-style: normal; }
+.nav-section { padding: 12px 12px 4px; font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 1px; color: #a0aec0; }
+.nav-item {
+  display: flex; align-items: center; gap: 12px; padding: 11px 16px;
+  border-radius: 10px; margin: 2px 8px; cursor: pointer;
+  font-size: 14px; font-weight: 500; color: #4a5568; transition: all .15s; text-decoration: none;
+}
+.nav-item:hover { background: var(--primary-light); color: var(--primary); }
+.nav-item.active { background: var(--primary); color: #fff; }
+.nav-item .badge-count {
+  margin-left: auto; background: var(--danger); color: #fff;
+  border-radius: 12px; padding: 2px 7px; font-size: 11px; font-weight: 700;
+}
+.sidebar-footer { margin-top: auto; padding: 16px; border-top: 1px solid #e8f0fe; }
+.user-info { display: flex; align-items: center; gap: 10px; }
+.user-avatar {
+  width: 36px; height: 36px; border-radius: 50%; background: var(--primary);
+  color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700;
+}
+.user-details { flex: 1; }
+.user-details .name { font-size: 13px; font-weight: 600; }
+.user-details .role { font-size: 11px; color: #a0aec0; }
+
+/* Header */
+.topbar {
+  position: fixed; top: 0; left: var(--sidebar-w); right: 0;
+  height: var(--header-h); background: #fff; z-index: 100;
+  display: flex; align-items: center; padding: 0 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.05); gap: 12px;
+}
+.topbar .page-title { font-size: 18px; font-weight: 700; color: #1a202c; flex: 1; }
+.status-pill {
+  padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 700;
+  display: flex; align-items: center; gap: 6px;
+}
+.status-pill.Normal { background: #e6f9f4; color: var(--success); }
+.status-pill.Warning { background: #fef9e7; color: var(--warning); }
+.status-pill.Critical { background: #fdf2f2; color: var(--danger); }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.status-dot.pulse { animation: pulse-dot 1s infinite; }
+@keyframes pulse-dot { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.5);opacity:.6} }
+
+/* Main content */
+.main-content {
+  margin-left: var(--sidebar-w); padding-top: var(--header-h);
+  min-height: 100vh;
+}
+.content-area { padding: 24px; }
+
+/* ── Cards ─────────────────────────────────────────────────────────────── */
+.card-vg {
+  background: #fff; border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.05); border: none;
+  overflow: hidden;
+}
+.card-vg .card-header-vg {
+  padding: 16px 20px 12px; border-bottom: 1px solid #f0f4f8;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.card-vg .card-body-vg { padding: 20px; }
+.card-title-vg { font-size: 13px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .5px; color: #718096; }
+
+/* Metric cards */
+.metric-card {
+  background: #fff; border-radius: 16px; padding: 22px 20px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.05); position: relative; overflow: hidden;
+  transition: transform .15s, box-shadow .15s;
+}
+.metric-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.1); }
+.metric-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+}
+.metric-card.heart::before { background: #e74c3c; }
+.metric-card.spo2::before { background: #3498db; }
+.metric-card.temp::before { background: #f39c12; }
+.metric-card.fall::before { background: #9b59b6; }
+.metric-card .metric-icon {
+  width: 48px; height: 48px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; margin-bottom: 12px;
+}
+.metric-card.heart .metric-icon { background: #fdf2f2; color: #e74c3c; }
+.metric-card.spo2 .metric-icon { background: #eaf2fb; color: #3498db; }
+.metric-card.temp .metric-icon { background: #fef9e7; color: #f39c12; }
+.metric-card.fall .metric-icon { background: #f5eef8; color: #9b59b6; }
+.metric-label { font-size: 12px; color: #a0aec0; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+.metric-value { font-size: 36px; font-weight: 800; color: #1a202c; line-height: 1.1; margin: 4px 0; }
+.metric-unit { font-size: 13px; color: #718096; font-weight: 500; }
+.metric-status { font-size: 12px; font-weight: 700; margin-top: 6px; }
+.metric-status.normal { color: var(--success); }
+.metric-status.warning { color: var(--warning); }
+.metric-status.critical { color: var(--danger); }
+
+/* Status banner */
+.status-banner {
+  border-radius: 14px; padding: 16px 20px;
+  display: flex; align-items: center; gap: 14px; margin-bottom: 20px;
+}
+.status-banner.Normal { background: linear-gradient(135deg, #00b894, #00cec9); color: #fff; }
+.status-banner.Warning { background: linear-gradient(135deg, #f39c12, #e67e22); color: #fff; }
+.status-banner.Critical { background: linear-gradient(135deg, #e74c3c, #c0392b); color: #fff; animation: critical-flash 1s infinite; }
+@keyframes critical-flash { 0%,100%{opacity:1} 50%{opacity:.88} }
+.status-banner .banner-icon { font-size: 32px; }
+.status-banner .banner-text h3 { font-size: 18px; font-weight: 700; }
+.status-banner .banner-text p { font-size: 13px; opacity: .9; }
+
+/* Alert items */
+.alert-item {
+  display: flex; gap: 14px; padding: 14px 16px; border-radius: 12px;
+  margin-bottom: 10px; border-left: 4px solid transparent; transition: background .15s;
+}
+.alert-item.critical { background: #fdf2f2; border-color: var(--danger); }
+.alert-item.warning { background: #fef9e7; border-color: var(--warning); }
+.alert-item.info { background: #eaf2fb; border-color: var(--primary); }
+.alert-item.unread { font-weight: 600; }
+.alert-item .alert-icon { font-size: 20px; margin-top: 2px; }
+.alert-item.critical .alert-icon { color: var(--danger); }
+.alert-item.warning .alert-icon { color: var(--warning); }
+.alert-item.info .alert-icon { color: var(--primary); }
+.alert-item .alert-body { flex: 1; }
+.alert-item .alert-msg { font-size: 14px; color: #2d3748; }
+.alert-item .alert-time { font-size: 11px; color: #a0aec0; margin-top: 3px; }
+.alert-item .mark-read-btn {
+  background: none; border: none; color: #a0aec0; cursor: pointer;
+  font-size: 16px; transition: color .2s; padding: 0 4px;
+}
+.alert-item .mark-read-btn:hover { color: var(--primary); }
+
+/* Simulation panel */
+.sim-panel { background: #1a202c; border-radius: 16px; padding: 20px; }
+.sim-panel h6 { color: #a0aec0; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px; }
+.sim-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.sim-btn {
+  padding: 8px 16px; border-radius: 8px; border: none; font-size: 13px;
+  font-weight: 600; cursor: pointer; transition: transform .1s, opacity .1s;
+}
+.sim-btn:hover { transform: translateY(-1px); opacity: .9; }
+.sim-btn.normal { background: var(--success); color: #fff; }
+.sim-btn.warning { background: var(--warning); color: #fff; }
+.sim-btn.critical { background: var(--danger); color: #fff; }
+.sim-btn.fall { background: #9b59b6; color: #fff; }
+.sim-btn.sos { background: #c0392b; color: #fff; animation: sos-pulse 1.5s infinite; }
+@keyframes sos-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(192,57,43,.6)} 50%{box-shadow:0 0 0 8px rgba(192,57,43,0)} }
+
+/* SOS / Fall banners */
+.emergency-banner {
+  background: linear-gradient(135deg, #c0392b, #e74c3c);
+  border-radius: 14px; padding: 18px 22px; color: #fff;
+  display: flex; align-items: center; gap: 16px; animation: critical-flash 1s infinite;
+}
+.emergency-banner .emg-icon { font-size: 36px; }
+
+/* Device status */
+.device-status { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.device-dot { width: 10px; height: 10px; border-radius: 50%; }
+.device-dot.connected { background: var(--success); animation: pulse-dot 2s infinite; }
+.device-dot.disconnected { background: #e2e8f0; }
+
+/* Profile */
+.profile-header {
+  background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+  border-radius: 16px; padding: 28px; color: #fff; margin-bottom: 20px;
+  display: flex; align-items: center; gap: 20px;
+}
+.profile-avatar {
+  width: 72px; height: 72px; border-radius: 50%;
+  background: rgba(255,255,255,.2); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 30px; font-weight: 700; flex-shrink: 0;
+}
+.profile-header h2 { font-size: 22px; font-weight: 700; }
+.profile-header p { opacity: .85; font-size: 14px; }
+.info-row { display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 0; border-bottom: 1px solid #f0f4f8; }
+.info-row:last-child { border-bottom: none; }
+.info-label { font-size: 12px; color: #a0aec0; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; }
+.info-value { font-size: 14px; font-weight: 600; color: #2d3748; }
+.blood-badge {
+  background: #fdf2f2; color: var(--danger); padding: 3px 12px;
+  border-radius: 20px; font-weight: 700; font-size: 14px;
+}
+.contact-card {
+  background: var(--primary-light); border-radius: 12px; padding: 14px 16px;
+  margin-bottom: 10px; display: flex; align-items: center; gap: 12px;
+}
+.contact-icon { font-size: 22px; color: var(--primary); }
+.contact-card .name { font-size: 14px; font-weight: 600; }
+.contact-card .phone { font-size: 13px; color: #718096; }
+
+/* Map */
+#map { height: 420px; border-radius: 12px; overflow: hidden; }
+.nav-btn {
+  background: var(--primary); color: #fff; border: none; border-radius: 10px;
+  padding: 10px 20px; font-size: 14px; font-weight: 600; cursor: pointer;
+  display: flex; align-items: center; gap: 8px; transition: background .2s;
+}
+.nav-btn:hover { background: var(--primary-dark); }
+
+/* Chart */
+canvas { max-width: 100%; }
+
+/* Toast */
+.toast-container-vg {
+  position: fixed; top: 80px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px;
+}
+.toast-vg {
+  padding: 14px 18px; border-radius: 12px; color: #fff; font-size: 14px;
+  font-weight: 600; max-width: 320px; box-shadow: 0 8px 24px rgba(0,0,0,.15);
+  display: flex; align-items: center; gap: 10px; animation: slide-in .3s ease;
+}
+.toast-vg.critical { background: var(--danger); }
+.toast-vg.warning { background: var(--warning); }
+.toast-vg.success { background: var(--success); }
+.toast-vg.info { background: var(--primary); }
+@keyframes slide-in { from{transform:translateX(100%);opacity:0} to{transform:none;opacity:1} }
+
+/* Responsive */
+.hamburger {
+  display: none; background: none; border: none; font-size: 22px;
+  color: #4a5568; cursor: pointer; padding: 4px 8px;
+}
+.sidebar-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4);
+  z-index: 190;
+}
+@media (max-width: 768px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: none; }
+  .sidebar-overlay.active { display: block; }
+  .main-content { margin-left: 0; }
+  .topbar { left: 0; }
+  .hamburger { display: block; }
+  .metric-value { font-size: 28px; }
+  .profile-header { flex-direction: column; text-align: center; }
+  #map { height: 300px; }
+  .login-card { padding: 32px 24px; }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #f0f4f8; }
+::-webkit-scrollbar-thumb { background: #cbd5e0; border-radius: 3px; }
+
+/* Heart animation */
+@keyframes heartbeat { 0%,100%{transform:scale(1)} 14%{transform:scale(1.15)} 28%{transform:scale(1)} 42%{transform:scale(1.08)} 70%{transform:scale(1)} }
+.heartbeat { animation: heartbeat 1s infinite; display: inline-block; }
+
+/* Edit form */
+.edit-input {
+  width: 100%; padding: 9px 14px; border: 2px solid #e2e8f0;
+  border-radius: 8px; font-size: 14px; outline: none;
+}
+.edit-input:focus { border-color: var(--primary); }
+.save-btn {
+  background: var(--primary); color: #fff; border: none; border-radius: 8px;
+  padding: 10px 24px; font-weight: 600; cursor: pointer;
+}
+.page-section { display: none; }
+.page-section.active { display: block; }
+</style>
+</head>
+<body>
+
+<!-- ── LOGIN / REGISTER SCREEN ────────────────────────────────────────────── -->
+<div id="loginScreen">
+  <div class="login-card">
+
+    <!-- Logo -->
+    <div class="login-logo">
+      <div class="shield"><i class="fas fa-shield-heart"></i></div>
+      <h1>Vital<em style="color:var(--primary)">Guard</em></h1>
+      <p>IoT Healthcare Monitoring System</p>
+    </div>
+
+    <!-- Login / Register toggle -->
+    <div class="auth-tabs">
+      <div class="auth-tab active" id="authTabLogin" onclick="switchAuthMode('login')">
+        <i class="fas fa-sign-in-alt me-1"></i> Sign In
+      </div>
+      <div class="auth-tab" id="authTabRegister" onclick="switchAuthMode('register')">
+        <i class="fas fa-user-plus me-1"></i> Create Account
+      </div>
+    </div>
+
+    <!-- ── LOGIN FORM ───────────────────────────────────────────────────────── -->
+    <div class="auth-form active" id="loginForm">
+      <!-- Role selector -->
+      <div class="role-tabs">
+        <div class="role-tab active" onclick="selectRole('patient')" id="tab-patient">
+          <i class="fas fa-user-injured me-1"></i> Patient
+        </div>
+        <div class="role-tab" onclick="selectRole('caretaker')" id="tab-caretaker">
+          <i class="fas fa-user-nurse me-1"></i> Caretaker
+        </div>
+      </div>
+
+      <!-- Username -->
+      <div class="input-wrap">
+        <i class="input-icon fas fa-user"></i>
+        <input type="text" class="form-control-vg" id="loginUser" placeholder="Username"
+               autocomplete="username">
+      </div>
+
+      <!-- Password -->
+      <div class="input-wrap">
+        <i class="input-icon fas fa-lock"></i>
+        <input type="password" class="form-control-vg" id="loginPass" placeholder="Password"
+               autocomplete="current-password"
+               onkeydown="if(event.key==='Enter') doLogin()">
+        <button class="pass-toggle" type="button" onclick="togglePass('loginPass',this)">
+          <i class="fas fa-eye"></i>
+        </button>
+      </div>
+
+      <!-- Remember me -->
+      <div class="remember-row">
+        <label>
+          <input type="checkbox" id="rememberMe"> Remember me
+        </label>
+        <span style="font-size:12px;color:var(--primary);cursor:pointer">Forgot password?</span>
+      </div>
+
+      <!-- Error message -->
+      <div class="form-msg error" id="loginError">
+        <i class="fas fa-exclamation-circle"></i>
+        <span id="loginErrorText">Invalid username or password</span>
+      </div>
+
+      <!-- Submit -->
+      <button class="btn-login" id="loginBtn" onclick="doLogin()">
+        <div class="spinner-sm"></div>
+        <span class="btn-txt"><i class="fas fa-sign-in-alt"></i> Sign In</span>
+      </button>
+
+      <div class="login-hint" style="margin-top:14px">
+        Demo — Patient: <strong>patient / patient123</strong><br>
+        Caretaker: <strong>caretaker / care123</strong>
+      </div>
+    </div><!-- /loginForm -->
+
+    <!-- ── REGISTER FORM ────────────────────────────────────────────────────── -->
+    <div class="auth-form" id="registerForm">
+
+      <!-- Full name -->
+      <div class="input-wrap">
+        <i class="input-icon fas fa-id-card"></i>
+        <input type="text" class="form-control-vg" id="regName" placeholder="Full Name"
+               autocomplete="name">
+      </div>
+
+      <!-- Email -->
+      <div class="input-wrap">
+        <i class="input-icon fas fa-envelope"></i>
+        <input type="email" class="form-control-vg" id="regEmail" placeholder="Email Address"
+               autocomplete="email">
+      </div>
+
+      <!-- Role -->
+      <div class="role-tabs" style="margin-bottom:14px">
+        <div class="role-tab active" onclick="selectRegRole('patient')" id="reg-tab-patient">
+          <i class="fas fa-user-injured me-1"></i> Patient
+        </div>
+        <div class="role-tab" onclick="selectRegRole('caretaker')" id="reg-tab-caretaker">
+          <i class="fas fa-user-nurse me-1"></i> Caretaker
+        </div>
+      </div>
+
+      <!-- Password -->
+      <div class="input-wrap">
+        <i class="input-icon fas fa-lock"></i>
+        <input type="password" class="form-control-vg" id="regPass" placeholder="Create Password"
+               autocomplete="new-password" oninput="checkStrength(this.value)">
+        <button class="pass-toggle" type="button" onclick="togglePass('regPass',this)">
+          <i class="fas fa-eye"></i>
+        </button>
+      </div>
+      <!-- Password strength -->
+      <div style="margin-top:-8px;margin-bottom:14px">
+        <div class="strength-bar"><div class="strength-fill" id="strengthFill"></div></div>
+        <div class="strength-label" id="strengthLabel" style="color:#a0aec0">Enter a password</div>
+      </div>
+
+      <!-- Confirm Password -->
+      <div class="input-wrap">
+        <i class="input-icon fas fa-lock"></i>
+        <input type="password" class="form-control-vg" id="regPassConfirm"
+               placeholder="Confirm Password" autocomplete="new-password"
+               onkeydown="if(event.key==='Enter') doRegister()">
+        <button class="pass-toggle" type="button" onclick="togglePass('regPassConfirm',this)">
+          <i class="fas fa-eye"></i>
+        </button>
+      </div>
+
+      <!-- Messages -->
+      <div class="form-msg error"   id="regError">
+        <i class="fas fa-exclamation-circle"></i>
+        <span id="regErrorText">Something went wrong</span>
+      </div>
+      <div class="form-msg success" id="regSuccess">
+        <i class="fas fa-check-circle"></i>
+        <span id="regSuccessText">Account created! Signing in…</span>
+      </div>
+
+      <!-- Submit -->
+      <button class="btn-login" id="regBtn" onclick="doRegister()">
+        <div class="spinner-sm"></div>
+        <span class="btn-txt"><i class="fas fa-user-plus"></i> Create Account</span>
+      </button>
+
+      <div class="login-hint" style="margin-top:12px">
+        Already have an account?
+        <span onclick="switchAuthMode('login')" style="color:var(--primary);cursor:pointer;font-weight:600">Sign In</span>
+      </div>
+    </div><!-- /registerForm -->
+
+  </div><!-- /login-card -->
+</div>
+
+<!-- ── APP SHELL ──────────────────────────────────────────────────────────── -->
+<div id="appShell">
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+  <!-- Sidebar -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="shield-sm"><i class="fas fa-shield-heart"></i></div>
+      <span>Vital<em>Guard</em></span>
+    </div>
+    <div class="nav-section">Navigation</div>
+    <a class="nav-item active" onclick="showPage('dashboard')" href="#">
+      <i class="fas fa-tachometer-alt"></i> Dashboard
+    </a>
+    <a class="nav-item" onclick="showPage('location')" href="#">
+      <i class="fas fa-map-marker-alt"></i> Location
+    </a>
+    <a class="nav-item" onclick="showPage('alerts')" href="#">
+      <i class="fas fa-bell"></i> Alerts
+      <span class="badge-count" id="alertBadge" style="display:none">0</span>
+    </a>
+    <a class="nav-item" onclick="showPage('profile')" href="#">
+      <i class="fas fa-user"></i> Patient Profile
+    </a>
+    <div class="nav-section">System</div>
+    <a class="nav-item" href="#" onclick="doLogout()">
+      <i class="fas fa-sign-out-alt"></i> Logout
+    </a>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar" id="userAvatar">U</div>
+        <div class="user-details">
+          <div class="name" id="sidebarUsername">User</div>
+          <div class="role" id="sidebarRole">Role</div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <button class="hamburger" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+    <div class="page-title" id="pageTitle">Dashboard</div>
+    <div class="device-status" id="deviceStatus">
+      <div class="device-dot disconnected" id="deviceDot"></div>
+      <span id="deviceText" style="font-size:13px;color:#718096">Device Offline</span>
+    </div>
+    <div class="status-pill Normal" id="statusPill">
+      <div class="status-dot pulse"></div>
+      Normal
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="main-content">
+    <div class="content-area">
+
+      <!-- ── DASHBOARD ─────────────────────────────────────────── -->
+      <div class="page-section active" id="page-dashboard">
+
+        <!-- Emergency banners -->
+        <div id="sosBanner" class="emergency-banner mb-4" style="display:none">
+          <div class="emg-icon"><i class="fas fa-exclamation-triangle"></i></div>
+          <div>
+            <div style="font-size:18px;font-weight:800">🚨 SOS TRIGGERED!</div>
+            <div style="font-size:14px;opacity:.9">Patient has pressed the SOS button. Immediate assistance required!</div>
+          </div>
+        </div>
+        <div id="fallBanner" class="emergency-banner mb-4" style="display:none">
+          <div class="emg-icon"><i class="fas fa-person-falling"></i></div>
+          <div>
+            <div style="font-size:18px;font-weight:800">⚠️ FALL DETECTED!</div>
+            <div style="font-size:14px;opacity:.9">A fall event has been detected. Please check on the patient.</div>
+          </div>
+        </div>
+
+        <!-- Status banner -->
+        <div class="status-banner Normal mb-4" id="statusBanner">
+          <div class="banner-icon"><i class="fas fa-heartbeat"></i></div>
+          <div class="banner-text">
+            <h3 id="bannerTitle">All Vitals Normal</h3>
+            <p id="bannerSub">Patient is in stable condition · Last updated: <span id="lastUpdated">--</span></p>
+          </div>
+        </div>
+
+        <!-- Metric cards -->
+        <div class="row g-3 mb-4">
+          <div class="col-12 col-sm-6 col-xl-3">
+            <div class="metric-card heart">
+              <div class="metric-icon"><i class="fas fa-heart heartbeat"></i></div>
+              <div class="metric-label">Heart Rate</div>
+              <div class="metric-value" id="hrValue">--</div>
+              <div class="metric-unit">bpm</div>
+              <div class="metric-status normal" id="hrStatus">Normal</div>
+            </div>
+          </div>
+          <div class="col-12 col-sm-6 col-xl-3">
+            <div class="metric-card spo2">
+              <div class="metric-icon"><i class="fas fa-lungs"></i></div>
+              <div class="metric-label">SpO₂</div>
+              <div class="metric-value" id="spo2Value">--</div>
+              <div class="metric-unit">%</div>
+              <div class="metric-status normal" id="spo2Status">Normal</div>
+            </div>
+          </div>
+          <div class="col-12 col-sm-6 col-xl-3">
+            <div class="metric-card temp">
+              <div class="metric-icon"><i class="fas fa-thermometer-half"></i></div>
+              <div class="metric-label">Temperature</div>
+              <div class="metric-value" id="tempValue">--</div>
+              <div class="metric-unit">°C</div>
+              <div class="metric-status normal" id="tempStatus">Normal</div>
+            </div>
+          </div>
+          <div class="col-12 col-sm-6 col-xl-3">
+            <div class="metric-card fall">
+              <div class="metric-icon"><i class="fas fa-person-falling"></i></div>
+              <div class="metric-label">Fall Status</div>
+              <div style="font-size:22px;font-weight:800;margin:8px 0" id="fallValue">SAFE</div>
+              <div class="metric-unit">Accelerometer</div>
+              <div class="metric-status normal" id="fallStatus" style="margin-top:6px">Stable</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-3">
+          <!-- Chart -->
+          <div class="col-12 col-lg-8">
+            <div class="card-vg">
+              <div class="card-header-vg">
+                <span class="card-title-vg">Live Vitals Chart</span>
+                <small style="color:#a0aec0;font-size:12px">Real-time trend</small>
+              </div>
+              <div class="card-body-vg">
+                <canvas id="vitalsChart" height="160"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Simulation -->
+          <div class="col-12 col-lg-4">
+            <div class="sim-panel">
+              <h6><i class="fas fa-flask me-2"></i>Sensor Simulator</h6>
+              <div class="sim-btns">
+                <button class="sim-btn normal" onclick="simulate('normal')">
+                  <i class="fas fa-check-circle me-1"></i>Normal
+                </button>
+                <button class="sim-btn warning" onclick="simulate('warning')">
+                  <i class="fas fa-exclamation me-1"></i>Warning
+                </button>
+                <button class="sim-btn critical" onclick="simulate('critical')">
+                  <i class="fas fa-skull-crossbones me-1"></i>Critical
+                </button>
+                <button class="sim-btn fall" onclick="simulate('fall')">
+                  <i class="fas fa-person-falling me-1"></i>Fall
+                </button>
+                <button class="sim-btn sos" onclick="simulate('sos')">
+                  <i class="fas fa-exclamation-triangle me-1"></i>SOS
+                </button>
+              </div>
+              <div style="margin-top:14px;padding:10px;background:rgba(255,255,255,.05);border-radius:8px">
+                <div style="color:#a0aec0;font-size:11px;margin-bottom:4px">LAST SIMULATED</div>
+                <div id="lastSim" style="color:#e2e8f0;font-size:13px">None</div>
+              </div>
+              <div style="margin-top:10px;padding:10px;background:rgba(255,255,255,.05);border-radius:8px">
+                <div style="color:#a0aec0;font-size:11px;margin-bottom:6px">QUICK API TEST</div>
+                <code style="color:#68d391;font-size:11px">POST /update-data</code><br>
+                <code style="color:#68d391;font-size:11px">GET /get-data</code>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div><!-- /dashboard -->
+
+      <!-- ── LOCATION ──────────────────────────────────────────── -->
+      <div class="page-section" id="page-location">
+        <div class="row g-3">
+          <div class="col-12">
+            <div class="card-vg">
+              <div class="card-header-vg">
+                <span class="card-title-vg"><i class="fas fa-map-marker-alt me-2"></i>Real-time Patient Location</span>
+                <div style="display:flex;gap:8px">
+                  <button class="nav-btn" onclick="navigateToPatient()">
+                    <i class="fas fa-route"></i> Navigate to Patient
+                  </button>
+                  <button class="nav-btn" style="background:#718096" onclick="refreshMap()">
+                    <i class="fas fa-sync"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="card-body-vg">
+                <div id="map"></div>
+                <div style="display:flex;gap:20px;margin-top:14px;flex-wrap:wrap">
+                  <div>
+                    <div style="font-size:11px;color:#a0aec0;text-transform:uppercase;letter-spacing:.5px">Latitude</div>
+                    <div style="font-size:16px;font-weight:700" id="mapLat">--</div>
+                  </div>
+                  <div>
+                    <div style="font-size:11px;color:#a0aec0;text-transform:uppercase;letter-spacing:.5px">Longitude</div>
+                    <div style="font-size:16px;font-weight:700" id="mapLng">--</div>
+                  </div>
+                  <div>
+                    <div style="font-size:11px;color:#a0aec0;text-transform:uppercase;letter-spacing:.5px">Last Fix</div>
+                    <div style="font-size:16px;font-weight:700" id="mapTime">--</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div><!-- /location -->
+
+      <!-- ── ALERTS ────────────────────────────────────────────── -->
+      <div class="page-section" id="page-alerts">
+        <div class="row g-3">
+          <div class="col-12">
+            <div class="card-vg">
+              <div class="card-header-vg">
+                <span class="card-title-vg"><i class="fas fa-bell me-2"></i>Alert History</span>
+                <button onclick="markAllRead()" style="background:var(--primary);color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:13px;font-weight:600;cursor:pointer">
+                  Mark All Read
+                </button>
+              </div>
+              <div class="card-body-vg">
+                <div id="alertsList">
+                  <div style="text-align:center;color:#a0aec0;padding:40px">
+                    <i class="fas fa-bell-slash fa-2x mb-2"></i><br>No alerts yet
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div><!-- /alerts -->
+
+      <!-- ── PROFILE ────────────────────────────────────────────── -->
+      <div class="page-section" id="page-profile">
+        <div class="profile-header">
+          <div class="profile-avatar" id="profileAvatar">RK</div>
+          <div>
+            <h2 id="profileName">Rajesh Kumar</h2>
+            <p id="profileSub">Patient · 68 years</p>
+          </div>
+        </div>
+        <div class="row g-3">
+          <!-- Info -->
+          <div class="col-12 col-md-6">
+            <div class="card-vg">
+              <div class="card-header-vg">
+                <span class="card-title-vg">Personal Information</span>
+                <button onclick="toggleEdit()" id="editBtn" style="background:var(--primary);color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:13px;font-weight:600;cursor:pointer">
+                  <i class="fas fa-edit me-1"></i>Edit
+                </button>
+              </div>
+              <div class="card-body-vg" id="profileView">
+                <div class="info-row">
+                  <span class="info-label">Full Name</span>
+                  <span class="info-value" id="pName">Rajesh Kumar</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Age</span>
+                  <span class="info-value" id="pAge">68 years</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Blood Group</span>
+                  <span class="blood-badge" id="pBlood">B+</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Medical Conditions</span>
+                  <span class="info-value" id="pConditions">Hypertension, Type 2 Diabetes</span>
+                </div>
+              </div>
+              <div class="card-body-vg" id="profileEdit" style="display:none">
+                <div style="margin-bottom:12px">
+                  <label style="font-size:12px;font-weight:600;color:#718096;text-transform:uppercase">Name</label>
+                  <input class="edit-input" id="editName" type="text">
+                </div>
+                <div style="margin-bottom:12px">
+                  <label style="font-size:12px;font-weight:600;color:#718096;text-transform:uppercase">Age</label>
+                  <input class="edit-input" id="editAge" type="number">
+                </div>
+                <div style="margin-bottom:12px">
+                  <label style="font-size:12px;font-weight:600;color:#718096;text-transform:uppercase">Blood Group</label>
+                  <select class="edit-input" id="editBlood">
+                    <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+                    <option>O+</option><option>O-</option><option>AB+</option><option>AB-</option>
+                  </select>
+                </div>
+                <div style="margin-bottom:16px">
+                  <label style="font-size:12px;font-weight:600;color:#718096;text-transform:uppercase">Medical Conditions</label>
+                  <input class="edit-input" id="editConditions" type="text">
+                </div>
+                <button class="save-btn" onclick="saveProfile()">Save Changes</button>
+                <button onclick="toggleEdit()" style="margin-left:10px;background:#e2e8f0;border:none;border-radius:8px;padding:10px 20px;font-weight:600;cursor:pointer">Cancel</button>
+              </div>
+            </div>
+          </div>
+          <!-- Contacts -->
+          <div class="col-12 col-md-6">
+            <div class="card-vg">
+              <div class="card-header-vg">
+                <span class="card-title-vg">Emergency Contacts</span>
+              </div>
+              <div class="card-body-vg">
+                <div class="contact-card">
+                  <div class="contact-icon"><i class="fas fa-user-friends"></i></div>
+                  <div>
+                    <div class="name" id="ec1Name">Priya Kumar (Daughter)</div>
+                    <div class="phone" id="ec1Phone"><i class="fas fa-phone me-1"></i>+91 98765 43210</div>
+                  </div>
+                </div>
+                <div class="contact-card">
+                  <div class="contact-icon"><i class="fas fa-user-md"></i></div>
+                  <div>
+                    <div class="name" id="ec2Name">Dr. Suresh Rao</div>
+                    <div class="phone" id="ec2Phone"><i class="fas fa-phone me-1"></i>+91 80123 45678</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div><!-- /profile -->
+
+    </div><!-- /content-area -->
+  </main>
+</div><!-- /appShell -->
+
+<!-- Toast container -->
+<div class="toast-container-vg" id="toastContainer"></div>
+
+<script>
+// ────────────────────────────────────────────────────────────────────────────
+// STATE
+// ────────────────────────────────────────────────────────────────────────────
+// ── Demo credentials (fallback when Flask is offline) ─────────────────────
+const DEMO_USERS = {
+  patient:   { password: 'patient123', role: 'patient' },
+  caretaker: { password: 'care123',    role: 'caretaker' },
+};
+
+const PATIENT = {
+  id: 1, name: 'Rajesh Kumar', age: 68, blood_group: 'B+',
+  medical_conditions: 'Hypertension, Type 2 Diabetes',
+  ec1_name: 'Priya Kumar (Daughter)', ec1_phone: '+91 98765 43210',
+  ec2_name: 'Dr. Suresh Rao',         ec2_phone: '+91 80123 45678',
+};
+
+let currentUser = null;
+let sensorData = {
+  heart_rate: 72, spo2: 98.5, temperature: 36.6,
+  fall_detected: false, sos_triggered: false,
+  latitude: 12.9716, longitude: 77.5946,
+  device_connected: false, status: 'Normal',
+  timestamp: new Date().toISOString(), unread_alerts: 0,
+};
+let alerts = [];
+let alertIdCounter = 1;
+let map = null;
+let marker = null;
+let vitalsChart = null;
+let chartData = { labels: [], hr: [], spo2: [], temp: [] };
+let updateInterval = null;
+let alarmAudio = null;
+let alarmPlaying = false;
+
+// ────────────────────────────────────────────────────────────────────────────
+// AUTH STATE
+// ────────────────────────────────────────────────────────────────────────────
+let currentRegRole = 'patient';
+
+// Restore "remember me" username on page load
+window.addEventListener('load', () => {
+  const saved = localStorage.getItem('vg_remember');
+  if (saved) {
+    try {
+      const { username, role } = JSON.parse(saved);
+      document.getElementById('loginUser').value = username;
+      document.getElementById('rememberMe').checked = true;
+      selectRole(role);
+    } catch(e) {}
+  }
+  // Check if already authenticated (Flask session still alive)
+  checkSessionAndRedirect();
+});
+
+function checkSessionAndRedirect() {
+  fetch(`${FLASK_URL}/check-auth`)
+    .then(r => r.json())
+    .then(d => {
+      if (d.logged) {
+        // Already logged in — restore user info and go straight to app
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('appShell').style.display = 'block';
+        if (currentUser === null) {
+          currentUser = { username: d.username || 'User', role: d.role || 'user', name: d.name || '' };
+        }
+        initApp();
+      }
+    })
+    .catch(() => {}); // server offline — stay on login screen
+}
+
+// ── Auth mode toggle (Login ↔ Register) ─────────────────────────────────────
+function switchAuthMode(mode) {
+  document.getElementById('loginForm').classList.toggle('active',    mode === 'login');
+  document.getElementById('registerForm').classList.toggle('active', mode === 'register');
+  document.getElementById('authTabLogin').classList.toggle('active',    mode === 'login');
+  document.getElementById('authTabRegister').classList.toggle('active', mode === 'register');
+  clearMessages();
+}
+
+function clearMessages() {
+  ['loginError','regError','regSuccess'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.className = el.className.replace(' error','').replace(' success','');
+  });
+}
+
+// ── Role selectors ────────────────────────────────────────────────────────────
+function selectRole(role) {
+  document.getElementById('tab-patient').classList.toggle('active',   role === 'patient');
+  document.getElementById('tab-caretaker').classList.toggle('active', role === 'caretaker');
+  // Pre-fill demo credentials
+  document.getElementById('loginUser').value = role;
+  document.getElementById('loginPass').value = role === 'patient' ? 'patient123' : 'care123';
+}
+
+function selectRegRole(role) {
+  currentRegRole = role;
+  document.getElementById('reg-tab-patient').classList.toggle('active',   role === 'patient');
+  document.getElementById('reg-tab-caretaker').classList.toggle('active', role === 'caretaker');
+}
+
+// ── Password visibility toggle ─────────────────────────────────────────────
+function togglePass(inputId, btn) {
+  const inp = document.getElementById(inputId);
+  const icon = btn.querySelector('i');
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    icon.className = 'fas fa-eye-slash';
+  } else {
+    inp.type = 'password';
+    icon.className = 'fas fa-eye';
+  }
+}
+
+// ── Password strength checker ──────────────────────────────────────────────
+function checkStrength(val) {
+  const fill  = document.getElementById('strengthFill');
+  const label = document.getElementById('strengthLabel');
+  let score = 0;
+  if (val.length >= 6)  score++;
+  if (val.length >= 10) score++;
+  if (/[A-Z]/.test(val)) score++;
+  if (/[0-9]/.test(val)) score++;
+  if (/[^a-zA-Z0-9]/.test(val)) score++;
+  const levels = [
+    { w: '20%',  bg: '#e74c3c', text: 'Very Weak',  color: '#e74c3c' },
+    { w: '40%',  bg: '#e67e22', text: 'Weak',        color: '#e67e22' },
+    { w: '60%',  bg: '#f39c12', text: 'Fair',        color: '#f39c12' },
+    { w: '80%',  bg: '#2ecc71', text: 'Strong',      color: '#2ecc71' },
+    { w: '100%', bg: '#00b894', text: 'Very Strong',  color: '#00b894' },
+  ];
+  const l = val.length === 0 ? null : levels[Math.min(score, 4)];
+  fill.style.width      = l ? l.w  : '0';
+  fill.style.background = l ? l.bg : '';
+  label.textContent     = l ? l.text : 'Enter a password';
+  label.style.color     = l ? l.color : '#a0aec0';
+}
+
+// ── showMsg helpers ────────────────────────────────────────────────────────
+function showFormMsg(id, type, text) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const textEl = el.querySelector('span') || el;
+  if (text) textEl.textContent = text;
+  el.className = 'form-msg ' + type;
+}
+function hideFormMsg(id) {
+  const el = document.getElementById(id);
+  if (el) el.className = 'form-msg';
+}
+
+// ── Spinner helpers ────────────────────────────────────────────────────────
+function setBusy(btnId, busy) {
+  document.getElementById(btnId).classList.toggle('busy', busy);
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// LOGIN
+// ────────────────────────────────────────────────────────────────────────────
+async function doLogin() {
+  hideFormMsg('loginError');
+  const username = document.getElementById('loginUser').value.trim();
+  const password = document.getElementById('loginPass').value;
+  const remember = document.getElementById('rememberMe').checked;
+
+  if (!username || !password) {
+    showFormMsg('loginError', 'error', 'Please enter username and password');
+    return;
+  }
+
+  setBusy('loginBtn', true);
+
+  try {
+    // ── Try Flask backend first ──────────────────────────────────────────────
+    const res = await fetch(`${FLASK_URL}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+    const data = await res.json();
+
+    if (data.success || data.status === 'success') {
+      // Save "remember me"
+      if (remember) {
+        localStorage.setItem('vg_remember', JSON.stringify({ username, role: data.role || 'user' }));
+      } else {
+        localStorage.removeItem('vg_remember');
+      }
+      currentUser = { username: data.username || username, role: data.role || 'user', name: data.name || username };
+      onLoginSuccess();
+    } else {
+      showFormMsg('loginError', 'error', data.message || 'Invalid username or password');
+    }
+
+  } catch(err) {
+    // ── Flask offline — fall back to hardcoded demo accounts ────────────────
+    console.warn('[VitalGuard] Flask offline, using demo credentials');
+    const DEMO = DEMO_USERS;
+    const demo = DEMO[username];
+    if (demo && demo.password === password) {
+      if (remember) localStorage.setItem('vg_remember', JSON.stringify({ username, role: demo.role }));
+      currentUser = { username, role: demo.role, name: username };
+      onLoginSuccess();
+      showToast('info', 'Flask offline — using demo mode');
+    } else {
+      showFormMsg('loginError', 'error', 'Invalid credentials (Flask offline)');
+    }
+  } finally {
+    setBusy('loginBtn', false);
+  }
+}
+
+function onLoginSuccess() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appShell').style.display = 'block';
+  initApp();
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// REGISTER
+// ────────────────────────────────────────────────────────────────────────────
+async function doRegister() {
+  hideFormMsg('regError');
+  hideFormMsg('regSuccess');
+
+  const name    = document.getElementById('regName').value.trim();
+  const email   = document.getElementById('regEmail').value.trim();
+  const pass    = document.getElementById('regPass').value;
+  const confirm = document.getElementById('regPassConfirm').value;
+
+  // Client-side validation
+  if (!name) {
+    showFormMsg('regError', 'error', 'Please enter your full name'); return;
+  }
+  if (!email || !email.includes('@')) {
+    showFormMsg('regError', 'error', 'Please enter a valid email address'); return;
+  }
+  if (pass.length < 6) {
+    showFormMsg('regError', 'error', 'Password must be at least 6 characters'); return;
+  }
+  if (pass !== confirm) {
+    showFormMsg('regError', 'error', 'Passwords do not match'); return;
+  }
+
+  setBusy('regBtn', true);
+
+  try {
+    const res = await fetch(`${FLASK_URL}/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, username: email, password: pass, role: currentRegRole }),
+    });
+    const data = await res.json();
+
+    if (data.status === 'registered' || data.success) {
+      showFormMsg('regSuccess', 'success', `Account created! Signing you in…`);
+      // Auto-login after short delay
+      setTimeout(async () => {
+        try {
+          const loginRes = await fetch(`${FLASK_URL}/login`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: email, password: pass }),
+          });
+          const loginData = await loginRes.json();
+          if (loginData.success || loginData.status === 'success') {
+            currentUser = { username: name, role: currentRegRole, name };
+            onLoginSuccess();
+          } else {
+            switchAuthMode('login');
+            document.getElementById('loginUser').value = email;
+          }
+        } catch(e) {
+          switchAuthMode('login');
+        }
+      }, 1200);
+
+    } else if (data.status === 'user exists') {
+      showFormMsg('regError', 'error', 'An account with that email already exists');
+    } else {
+      showFormMsg('regError', 'error', data.message || 'Registration failed. Please try again.');
+    }
+
+  } catch(err) {
+    // Flask offline
+    showFormMsg('regError', 'error', 'Cannot connect to server. Is Flask running?');
+    console.warn('[VitalGuard] Register failed:', err.message);
+  } finally {
+    setBusy('regBtn', false);
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// LOGOUT
+// ────────────────────────────────────────────────────────────────────────────
+function doLogout() {
+  if (updateInterval) clearInterval(updateInterval);
+  stopAlarm();
+  currentUser = null;
+
+  // Tell Flask to clear session
+  fetch(`${FLASK_URL}/logout`).catch(() => {});
+
+  document.getElementById('appShell').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+
+  // Clear form
+  document.getElementById('loginPass').value = '';
+  hideFormMsg('loginError');
+  showToast('success', 'Logged out successfully');
+
+  // Small delay so toast shows before screen switches
+  setTimeout(() => {}, 300);
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// APP INIT
+// ────────────────────────────────────────────────────────────────────────────
+function initApp() {
+  const displayName = currentUser.name || currentUser.username;
+  const initial     = displayName.charAt(0).toUpperCase();
+  document.getElementById('sidebarUsername').textContent = displayName;
+  document.getElementById('sidebarRole').textContent = (currentUser.role || 'user').charAt(0).toUpperCase() + (currentUser.role || 'user').slice(1);
+  document.getElementById('userAvatar').textContent = initial;
+  initChart();
+  startPolling();
+  // NOTE: simulateInternalData removed — real ESP32 data used
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// PAGES
+// ────────────────────────────────────────────────────────────────────────────
+const pageTitles = {
+  dashboard: 'Dashboard', location: 'Location Tracking',
+  alerts: 'Alert History', profile: 'Patient Profile',
+};
+function showPage(page) {
+  document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.textContent.trim().toLowerCase().includes(page === 'alerts' ? 'alert' : page)) n.classList.add('active');
+  });
+  document.getElementById('pageTitle').textContent = pageTitles[page];
+  if (page === 'location') {
+    setTimeout(() => { initMap(); updateMap(); }, 100);
+  }
+  closeSidebar();
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('active');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('active');
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// SENSOR SIMULATION
+// ────────────────────────────────────────────────────────────────────────────
+function rand(min, max) { return Math.random() * (max - min) + min; }
+
+function simulateInternalData(scenario) {
+  const lat = 12.9716 + rand(-0.005, 0.005);
+  const lng = 77.5946 + rand(-0.005, 0.005);
+  const s = {
+    normal:   [rand(65,85),  rand(97,99),  rand(36.2,37.2), false, false],
+    warning:  [rand(100,110),rand(93,95),  rand(37.8,38.5), false, false],
+    critical: [rand(130,155),rand(85,89),  rand(39.5,40.5), false, false],
+    fall:     [rand(80,95),  rand(95,98),  rand(36.5,37.0), true,  false],
+    sos:      [rand(90,110), rand(94,97),  rand(36.5,37.5), false, true],
+  }[scenario] || [rand(65,85), rand(97,99), rand(36.2,37.2), false, false];
+
+  const [hr, spo2, temp, fall, sos] = s;
+  sensorData = {
+    heart_rate: +hr.toFixed(1), spo2: +spo2.toFixed(1), temperature: +temp.toFixed(1),
+    fall_detected: fall, sos_triggered: sos,
+    latitude: +lat.toFixed(6), longitude: +lng.toFixed(6),
+    device_connected: true, timestamp: new Date().toISOString(),
+    status: getStatus(hr, spo2, temp, fall, sos),
+  };
+
+  // Generate alerts
+  if (sos)  addAlert('SOS', 'SOS button pressed! Patient needs immediate assistance.', 'critical');
+  if (fall) addAlert('Fall', 'Fall detected! Patient may have fallen.', 'critical');
+  if (hr < 50) addAlert('HeartRate', `Critical: Very low heart rate (${hr.toFixed(0)} bpm)`, 'critical');
+  else if (hr > 120) addAlert('HeartRate', `Critical: Very high heart rate (${hr.toFixed(0)} bpm)`, 'critical');
+  if (spo2 < 90) addAlert('SpO2', `Critical: Very low oxygen saturation (${spo2.toFixed(1)}%)`, 'critical');
+  if (temp > 39.5) addAlert('Temperature', `Critical: High fever detected (${temp.toFixed(1)}°C)`, 'critical');
+
+  sensorData.unread_alerts = alerts.filter(a => !a.is_read).length;
+  updateDashboard();
+}
+
+function simulate(scenario) {
+  // POST to Flask /simulate-data (server writes to DB, next fetchRealData pick it up)
+  fetch(`${FLASK_URL}/simulate-data`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ scenario }),
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) {
+      document.getElementById('lastSim').textContent =
+        scenario.charAt(0).toUpperCase() + scenario.slice(1) + ' — ' + new Date().toLocaleTimeString();
+      const type = scenario === 'normal' ? 'success' : scenario === 'warning' ? 'warning' : 'critical';
+      showToast(type, `Simulated: ${scenario.charAt(0).toUpperCase() + scenario.slice(1)}`);
+      fetchRealData(); // immediate refresh instead of waiting 2 s
+    }
+  })
+  .catch(() => {
+    // Flask offline — fall back to in-browser simulation so demo still works
+    simulateInternalData(scenario);
+    document.getElementById('lastSim').textContent =
+      scenario.charAt(0).toUpperCase() + scenario.slice(1) + ' — ' + new Date().toLocaleTimeString() + ' (offline)';
+    showToast('warning', 'Flask offline — using browser simulation');
+  });
+}
+
+function getStatus(hr, spo2, temp, fall, sos) {
+  if (fall || sos) return 'Critical';
+  if (hr < 50 || hr > 120 || spo2 < 90 || temp > 39.5 || temp < 35) return 'Critical';
+  if (hr < 60 || hr > 100 || spo2 < 95 || temp > 37.8) return 'Warning';
+  return 'Normal';
+}
+
+function addAlert(type, message, severity) {
+  alerts.unshift({
+    id: alertIdCounter++, type, message, severity,
+    is_read: false, timestamp: new Date().toISOString(),
+  });
+  if (alerts.length > 50) alerts.pop();
+  if (severity === 'critical') {
+    playAlarm();
+    showToast('critical', message.length > 60 ? message.substring(0, 58) + '…' : message);
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// REAL API POLLING  (ESP32 → Flask → Dashboard)
+// ────────────────────────────────────────────────────────────────────────────
+
+// ── Config: point this at your Flask server ──────────────────────────────────
+const FLASK_URL = 'http://127.0.0.1:5000';
+
+function startPolling() {
+  // First fetch immediately, then every 2 seconds
+  fetchRealData();
+  updateInterval = setInterval(fetchRealData, 2000);
+}
+
+async function fetchRealData() {
+  try {
+    const res = await fetch(`${FLASK_URL}/get-data?patient_id=1`);
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const data = await res.json();
+
+    // If Flask returns "no data" (DB empty), keep offline state
+    if (!data || data.status === 'no data') {
+      setDeviceOffline();
+      return;
+    }
+
+    // ── Normalise field names (handles both schema variants) ─────────────────
+    // New schema:  heart_rate, spo2, temperature, fall_detected, sos_triggered, latitude, longitude
+    // Simple schema: heart_rate, spo2, temp, fall ("YES"/"NO"), sos ("YES"/"NO"), lat, lon
+    const hr   = parseFloat(data.heart_rate  ?? 0);
+    const sp   = parseFloat(data.spo2        ?? data.spo2 ?? 98);
+    const tmp  = parseFloat(data.temperature ?? data.temp ?? 36.5);
+    const fall = data.fall_detected === true || data.fall === 'YES';
+    const sos  = data.sos_triggered  === true || data.sos  === 'YES';
+    const lat  = parseFloat(data.latitude    ?? data.lat ?? 12.9716);
+    const lng  = parseFloat(data.longitude   ?? data.lon ?? 77.5946);
+
+    const prevFall = sensorData.fall_detected;
+    const prevSos  = sensorData.sos_triggered;
+
+    sensorData = {
+      heart_rate:       hr,
+      spo2:             sp,
+      temperature:      tmp,
+      fall_detected:    fall,
+      sos_triggered:    sos,
+      latitude:         lat,
+      longitude:        lng,
+      device_connected: true,
+      timestamp:        data.timestamp ?? new Date().toISOString(),
+      status:           getStatus(hr, sp, tmp, fall, sos),
+      unread_alerts:    data.unread_alerts ?? alerts.filter(a => !a.is_read).length,
+    };
+
+    // ── Auto-generate client-side alerts for new events ──────────────────────
+    if (sos  && !prevSos)  addAlert('SOS',  'SOS button pressed! Patient needs immediate assistance.', 'critical');
+    if (fall && !prevFall) addAlert('Fall', 'Fall detected! Patient may have fallen.', 'critical');
+    if (hr < 50)  addAlert('HeartRate',   `Critical: Very low heart rate (${hr.toFixed(0)} bpm)`,  'critical');
+    if (hr > 120) addAlert('HeartRate',   `Critical: Very high heart rate (${hr.toFixed(0)} bpm)`, 'critical');
+    if (sp < 90)  addAlert('SpO2',        `Critical: Low oxygen saturation (${sp.toFixed(1)}%)`,   'critical');
+    if (tmp > 39.5) addAlert('Temperature',`Critical: High fever detected (${tmp.toFixed(1)}°C)`,  'critical');
+
+    updateDashboard();
+    updateAlertBadge();
+
+  } catch (err) {
+    // Flask server unreachable — show offline indicator
+    console.warn('[VitalGuard] Device offline:', err.message);
+    setDeviceOffline();
+  }
+}
+
+function setDeviceOffline() {
+  sensorData.device_connected = false;
+  const dot = document.getElementById('deviceDot');
+  const txt = document.getElementById('deviceText');
+  if (dot) dot.className = 'device-dot disconnected';
+  if (txt) txt.textContent = 'Device Offline';
+}
+
+function updateDashboard() {
+  const d = sensorData;
+  const s = d.status;
+
+  // Status pill
+  const pill = document.getElementById('statusPill');
+  pill.className = 'status-pill ' + s;
+  pill.innerHTML = `<div class="status-dot pulse"></div>${s}`;
+
+  // Device
+  document.getElementById('deviceDot').className = 'device-dot ' + (d.device_connected ? 'connected' : 'disconnected');
+  document.getElementById('deviceText').textContent = d.device_connected ? 'Device Online' : 'Device Offline';
+
+  // HR
+  document.getElementById('hrValue').textContent = d.heart_rate.toFixed(0);
+  setMetricStatus('hrStatus', d.heart_rate < 50 || d.heart_rate > 120 ? 'critical' :
+    d.heart_rate < 60 || d.heart_rate > 100 ? 'warning' : 'normal',
+    d.heart_rate < 50 || d.heart_rate > 120 ? 'Critical' :
+    d.heart_rate < 60 || d.heart_rate > 100 ? 'Warning' : 'Normal');
+
+  // SpO2
+  document.getElementById('spo2Value').textContent = d.spo2.toFixed(1);
+  setMetricStatus('spo2Status', d.spo2 < 90 ? 'critical' : d.spo2 < 95 ? 'warning' : 'normal',
+    d.spo2 < 90 ? 'Critical' : d.spo2 < 95 ? 'Warning' : 'Normal');
+
+  // Temp
+  document.getElementById('tempValue').textContent = d.temperature.toFixed(1);
+  setMetricStatus('tempStatus', d.temperature > 39.5 ? 'critical' : d.temperature > 37.8 ? 'warning' : 'normal',
+    d.temperature > 39.5 ? 'Critical' : d.temperature > 37.8 ? 'Warning' : 'Normal');
+
+  // Fall
+  const fallEl = document.getElementById('fallValue');
+  const fallSt = document.getElementById('fallStatus');
+  if (d.fall_detected) {
+    fallEl.textContent = 'FALL DETECTED'; fallEl.style.color = 'var(--danger)';
+    fallSt.textContent = 'Emergency'; fallSt.className = 'metric-status critical';
+  } else {
+    fallEl.textContent = 'SAFE'; fallEl.style.color = 'var(--success)';
+    fallSt.textContent = 'Stable'; fallSt.className = 'metric-status normal';
+  }
+
+  // Banners
+  document.getElementById('sosBanner').style.display = d.sos_triggered ? 'flex' : 'none';
+  document.getElementById('fallBanner').style.display = d.fall_detected ? 'flex' : 'none';
+
+  // Status banner
+  const banner = document.getElementById('statusBanner');
+  banner.className = 'status-banner ' + s + ' mb-4';
+  document.getElementById('bannerTitle').textContent =
+    s === 'Critical' ? '🚨 Critical Condition – Immediate Action Required' :
+    s === 'Warning' ? '⚠️ Warning – Abnormal Vitals Detected' : '✅ All Vitals Normal';
+  document.getElementById('bannerSub').innerHTML =
+    (s === 'Critical' ? 'Patient requires immediate attention' :
+    s === 'Warning' ? 'Monitor closely, check on patient' : 'Patient is in stable condition') +
+    ' · Last updated: <span id="lastUpdated">' + formatTime(d.timestamp) + '</span>';
+
+  // Chart
+  pushChartData(d.heart_rate, d.spo2, d.temperature);
+
+  // Alert badge
+  updateAlertBadge();
+
+  // Update alerts list if on that page
+  if (document.getElementById('page-alerts').classList.contains('active')) renderAlerts();
+
+  // Update map if on location page
+  if (document.getElementById('page-location').classList.contains('active')) updateMap();
+}
+
+function setMetricStatus(id, cls, text) {
+  const el = document.getElementById(id);
+  el.className = 'metric-status ' + cls;
+  el.textContent = text;
+}
+
+function updateAlertBadge() {
+  const unread = alerts.filter(a => !a.is_read).length;
+  const badge = document.getElementById('alertBadge');
+  badge.style.display = unread > 0 ? 'inline-block' : 'none';
+  badge.textContent = unread;
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// CHART
+// ────────────────────────────────────────────────────────────────────────────
+function initChart() {
+  const ctx = document.getElementById('vitalsChart').getContext('2d');
+  vitalsChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [
+        { label: 'Heart Rate (bpm)', data: [], borderColor: '#e74c3c', backgroundColor: 'rgba(231,76,60,.08)',
+          tension: .4, pointRadius: 2, borderWidth: 2 },
+        { label: 'SpO₂ (%)', data: [], borderColor: '#3498db', backgroundColor: 'rgba(52,152,219,.08)',
+          tension: .4, pointRadius: 2, borderWidth: 2 },
+        { label: 'Temperature (°C)', data: [], borderColor: '#f39c12', backgroundColor: 'rgba(243,156,18,.08)',
+          tension: .4, pointRadius: 2, borderWidth: 2 },
+      ],
+    },
+    options: {
+      responsive: true, animation: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { position: 'bottom', labels: { padding: 16, font: { size: 12 } } } },
+      scales: {
+        x: { grid: { color: '#f0f4f8' }, ticks: { font: { size: 11 } } },
+        y: { grid: { color: '#f0f4f8' }, ticks: { font: { size: 11 } }, beginAtZero: false },
+      },
+    },
+  });
+}
+
+function pushChartData(hr, spo2, temp) {
+  const label = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  chartData.labels.push(label);
+  chartData.hr.push(hr);
+  chartData.spo2.push(spo2);
+  chartData.temp.push(temp);
+  const MAX = 20;
+  if (chartData.labels.length > MAX) {
+    chartData.labels.shift(); chartData.hr.shift(); chartData.spo2.shift(); chartData.temp.shift();
+  }
+  vitalsChart.data.labels = [...chartData.labels];
+  vitalsChart.data.datasets[0].data = [...chartData.hr];
+  vitalsChart.data.datasets[1].data = [...chartData.spo2];
+  vitalsChart.data.datasets[2].data = [...chartData.temp];
+  vitalsChart.update('none');
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// MAP
+// ────────────────────────────────────────────────────────────────────────────
+function initMap() {
+  if (map) return;
+  map = L.map('map').setView([12.9716, 77.5946], 15);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors',
+  }).addTo(map);
+  const icon = L.divIcon({
+    html: '<div style="background:var(--danger);width:20px;height:20px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3);animation:pulse-dot 1s infinite"></div>',
+    className: '', iconSize: [20, 20], iconAnchor: [10, 10],
+  });
+  marker = L.marker([12.9716, 77.5946], { icon }).addTo(map);
+  marker.bindPopup('<b>Rajesh Kumar</b><br>Patient Location').openPopup();
+}
+
+function updateMap() {
+  if (!map || !marker) return;
+  const { latitude: lat, longitude: lng } = sensorData;
+  marker.setLatLng([lat, lng]);
+  document.getElementById('mapLat').textContent = lat.toFixed(6);
+  document.getElementById('mapLng').textContent = lng.toFixed(6);
+  document.getElementById('mapTime').textContent = formatTime(sensorData.timestamp);
+}
+
+function refreshMap() {
+  if (map && marker) map.setView([sensorData.latitude, sensorData.longitude], 15);
+  updateMap();
+}
+
+function navigateToPatient() {
+  const { latitude: lat, longitude: lng } = sensorData;
+  const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+  window.open(url, '_blank');
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// ALERTS
+// ────────────────────────────────────────────────────────────────────────────
+function renderAlerts() {
+  const container = document.getElementById('alertsList');
+  if (alerts.length === 0) {
+    container.innerHTML = '<div style="text-align:center;color:#a0aec0;padding:40px"><i class="fas fa-bell-slash fa-2x mb-2"></i><br>No alerts yet</div>';
+    return;
+  }
+  container.innerHTML = alerts.map(a => `
+    <div class="alert-item ${a.severity} ${a.is_read ? '' : 'unread'}" id="alert-${a.id}">
+      <div class="alert-icon">
+        ${a.severity === 'critical' ? '🚨' : a.severity === 'warning' ? '⚠️' : 'ℹ️'}
+      </div>
+      <div class="alert-body">
+        <div class="alert-msg">${a.message}</div>
+        <div class="alert-time">${a.type} · ${formatRelTime(a.timestamp)} ${a.is_read ? '· Read' : '· <b>Unread</b>'}</div>
+      </div>
+      ${!a.is_read ? `<button class="mark-read-btn" onclick="markRead(${a.id})"><i class="fas fa-check"></i></button>` : ''}
+    </div>
+  `).join('');
+}
+
+function markRead(id) {
+  const a = alerts.find(x => x.id === id);
+  if (a) { a.is_read = true; }
+  renderAlerts();
+  updateAlertBadge();
+}
+
+function markAllRead() {
+  alerts.forEach(a => a.is_read = true);
+  renderAlerts();
+  updateAlertBadge();
+  showToast('success', 'All alerts marked as read');
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// PROFILE
+// ────────────────────────────────────────────────────────────────────────────
+function loadProfile() {
+  document.getElementById('profileName').textContent = PATIENT.name;
+  document.getElementById('profileSub').textContent = `Patient · ${PATIENT.age} years`;
+  document.getElementById('profileAvatar').textContent = PATIENT.name.split(' ').map(w=>w[0]).join('').substring(0,2);
+  document.getElementById('pName').textContent = PATIENT.name;
+  document.getElementById('pAge').textContent = PATIENT.age + ' years';
+  document.getElementById('pBlood').textContent = PATIENT.blood_group;
+  document.getElementById('pConditions').textContent = PATIENT.medical_conditions;
+  document.getElementById('ec1Name').textContent = PATIENT.ec1_name;
+  document.getElementById('ec1Phone').innerHTML = `<i class="fas fa-phone me-1"></i>${PATIENT.ec1_phone}`;
+  document.getElementById('ec2Name').textContent = PATIENT.ec2_name;
+  document.getElementById('ec2Phone').innerHTML = `<i class="fas fa-phone me-1"></i>${PATIENT.ec2_phone}`;
+}
+
+function toggleEdit() {
+  const view = document.getElementById('profileView');
+  const edit = document.getElementById('profileEdit');
+  const btn  = document.getElementById('editBtn');
+  if (edit.style.display === 'none') {
+    // Populate edit form
+    document.getElementById('editName').value = PATIENT.name;
+    document.getElementById('editAge').value = PATIENT.age;
+    document.getElementById('editBlood').value = PATIENT.blood_group;
+    document.getElementById('editConditions').value = PATIENT.medical_conditions;
+    view.style.display = 'none'; edit.style.display = 'block';
+    btn.innerHTML = '<i class="fas fa-times me-1"></i>Cancel';
+    btn.style.background = '#718096';
+  } else {
+    view.style.display = 'block'; edit.style.display = 'none';
+    btn.innerHTML = '<i class="fas fa-edit me-1"></i>Edit';
+    btn.style.background = 'var(--primary)';
+  }
+}
+
+function saveProfile() {
+  PATIENT.name = document.getElementById('editName').value;
+  PATIENT.age = +document.getElementById('editAge').value;
+  PATIENT.blood_group = document.getElementById('editBlood').value;
+  PATIENT.medical_conditions = document.getElementById('editConditions').value;
+  loadProfile();
+  // Close edit
+  document.getElementById('profileView').style.display = 'block';
+  document.getElementById('profileEdit').style.display = 'none';
+  document.getElementById('editBtn').innerHTML = '<i class="fas fa-edit me-1"></i>Edit';
+  document.getElementById('editBtn').style.background = 'var(--primary)';
+  showToast('success', 'Profile updated successfully');
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// ALARM
+// ────────────────────────────────────────────────────────────────────────────
+function playAlarm() {
+  if (alarmPlaying) return;
+  alarmPlaying = true;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    function beep(freq, start, dur) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'square'; osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.3, ctx.currentTime + start);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
+      osc.start(ctx.currentTime + start);
+      osc.stop(ctx.currentTime + start + dur + 0.05);
+    }
+    for (let i = 0; i < 3; i++) { beep(880, i * 0.5, 0.3); beep(660, i * 0.5 + 0.3, 0.15); }
+    setTimeout(() => alarmPlaying = false, 2000);
+  } catch(e) { alarmPlaying = false; }
+}
+
+function stopAlarm() { alarmPlaying = false; }
+
+// ────────────────────────────────────────────────────────────────────────────
+// TOAST
+// ────────────────────────────────────────────────────────────────────────────
+function showToast(type, msg) {
+  const icons = { critical: 'fa-exclamation-triangle', warning: 'fa-exclamation', success: 'fa-check-circle', info: 'fa-info-circle' };
+  const t = document.createElement('div');
+  t.className = `toast-vg ${type}`;
+  t.innerHTML = `<i class="fas ${icons[type] || icons.info}"></i> ${msg}`;
+  document.getElementById('toastContainer').appendChild(t);
+  setTimeout(() => { t.style.animation = 'none'; t.style.opacity = '0'; t.style.transition = 'opacity .3s'; setTimeout(() => t.remove(), 300); }, 4000);
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// UTILS
+// ────────────────────────────────────────────────────────────────────────────
+function formatTime(iso) {
+  try { return new Date(iso).toLocaleTimeString(); } catch(e) { return '--'; }
+}
+function formatRelTime(iso) {
+  const d = new Date(iso);
+  const diff = (Date.now() - d) / 1000;
+  if (diff < 60) return 'Just now';
+  if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
+  return d.toLocaleDateString();
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// OVERRIDE showPage to handle profile
+// ────────────────────────────────────────────────────────────────────────────
+const _origShowPage = showPage;
+window.showPage = function(page) {
+  _origShowPage(page);
+  if (page === 'alerts') setTimeout(renderAlerts, 50);
+  if (page === 'profile') setTimeout(loadProfile, 50);
+};
+
+// Keyboard shortcut
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && document.getElementById('loginScreen').style.display !== 'none') doLogin(); });
+</script>
+</body>
+</html>
