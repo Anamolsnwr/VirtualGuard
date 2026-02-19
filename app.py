@@ -1,24 +1,16 @@
-from flask import Flask, render_template, request, redirect, session, url_for
-import sqlite3
 import os
+import sqlite3
+from flask import Flask, render_template, request, redirect, session, url_for
 from werkzeug.security import generate_password_hash, check_password_hash
-from functools import wraps
 
+app = Flask(__name__)
+app.secret_key = "supersecretkey"
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-app = Flask(
-    __name__,
-    template_folder=os.path.join(BASE_DIR, "templates")
-)
-app.secret_key = os.environ.get("SECRET_KEY", "dev_key")
-
-
-DATABASE = os.path.join(BASE_DIR, "users.db")
+DATABASE = "users.db"
 
 
 # -----------------------------
-# Create Database Automatically
+# Create Database
 # -----------------------------
 def init_db():
     conn = sqlite3.connect(DATABASE)
@@ -34,20 +26,11 @@ def init_db():
     conn.commit()
     conn.close()
 
-
 init_db()
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'user_id' not in session:
-            return redirect(url_for('index'))
-        return f(*args, **kwargs)
-    return decorated_function
-
 
 
 # -----------------------------
-# Home / Login Page (GET)
+# Home Page
 # -----------------------------
 @app.route('/')
 def index():
@@ -55,7 +38,34 @@ def index():
 
 
 # -----------------------------
-# Login (POST)
+# Register
+# -----------------------------
+@app.route('/register', methods=['POST'])
+def register():
+    name = request.form['name']
+    email = request.form['email']
+    password = request.form['password']
+
+    hashed_password = generate_password_hash(password)
+
+    try:
+        conn = sqlite3.connect(DATABASE)
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
+            (name, email, hashed_password)
+        )
+        conn.commit()
+        conn.close()
+
+        return "Account created successfully. Please go back and login."
+
+    except sqlite3.IntegrityError:
+        return "Email already registered."
+
+
+# -----------------------------
+# Login
 # -----------------------------
 @app.route('/login', methods=['POST'])
 def login():
@@ -68,55 +78,30 @@ def login():
     user = cursor.fetchone()
     conn.close()
 
-    if user and check_password_hash(user[3], password):
-        session['user_id'] = user[0]
-        session['user_name'] = user[1]
-        return redirect(url_for('dashboard'))
-    else:
-        return "Invalid email or password."
+    # If user does not exist → reject
+    if not user:
+        return "No account found. Please register first."
 
-# -----------------------------
-# Register (POST)
-# -----------------------------
-@app.route('/register', methods=['POST'])
-def register():
-    name = request.form['name']
-    email = request.form['email']
-    password = generate_password_hash(request.form['password'])
+    # If password incorrect → reject
+    if not check_password_hash(user[3], password):
+        return "Incorrect password."
 
-    try:
-        conn = sqlite3.connect(DATABASE)
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
-            (name, email, password)
-        )
-        conn.commit()
-        conn.close()
-        return redirect(url_for('index'))
+    # Success
+    session['user_id'] = user[0]
+    session['user_name'] = user[1]
 
-    except sqlite3.IntegrityError:
-        return "Email already exists."
-
+    return redirect(url_for('dashboard'))
 
 
 # -----------------------------
 # Dashboard
 # -----------------------------
 @app.route('/dashboard')
-@login_required
-def dashboard():
-    return f"""
-    <h1>Welcome {session['user_name']}!</h1>
-    <p>Your VitalGuard system is connected.</p>
-    <a href='/logout'>Logout</a>
-    """
-
 def dashboard():
     if 'user_id' in session:
         return f"""
         <h1>Welcome {session['user_name']}!</h1>
-        <p>Your VitalGuard system is connected.</p>
+        <p>VitalGuard system active.</p>
         <a href='/logout'>Logout</a>
         """
     else:
@@ -130,3 +115,7 @@ def dashboard():
 def logout():
     session.clear()
     return redirect(url_for('index'))
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
