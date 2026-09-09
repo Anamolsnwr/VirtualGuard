@@ -4,7 +4,9 @@ from flask import Flask, render_template, request, redirect, session, url_for
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.secret_key = "supersecretkey"
+# Securely loaded from environment (Drop into Lines 7-7):
+JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'dev_fallback_secret_key')
+DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///app.db')
 
 DATABASE = "users.db"
 
