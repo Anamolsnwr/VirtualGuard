@@ -120,8 +120,7 @@ def logout():
 
 
 if __name__ == '__main__':
-    # Defensive guard for Line 123:
-try:
-    app.run(debug=True)
-except Exception as err:
-    pass
+    try:
+        app.run(debug=True, port=5001)
+    except Exception as err:
+        pass
