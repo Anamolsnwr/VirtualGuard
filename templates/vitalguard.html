@@ -860,12 +860,14 @@ canvas { max-width: 100%; }
 // ────────────────────────────────────────────────────────────────────────────
 // STATE
 // ────────────────────────────────────────────────────────────────────────────
+// ── Config: relative path to current origin ensures it works on any port ───
+const FLASK_URL = '';
+
 // ── Demo credentials (fallback when Flask is offline) ─────────────────────
-/*const DEMO_USERS = {
+const DEMO_USERS = {
   patient:   { password: 'patient123', role: 'patient' },
   caretaker: { password: 'care123',    role: 'caretaker' },
 };
-*/
 const PATIENT = {
   id: 1, name: 'Rajesh Kumar', age: 68, blood_group: 'B+',
   medical_conditions: 'Hypertension, Type 2 Diabetes',
@@ -1302,8 +1304,6 @@ function addAlert(type, message, severity) {
 // REAL API POLLING  (ESP32 → Flask → Dashboard)
 // ────────────────────────────────────────────────────────────────────────────
 
-// ── Config: point this at your Flask server ──────────────────────────────────
-const FLASK_URL = 'http://127.0.0.1:5000';
 
 function startPolling() {
   // First fetch immediately, then every 2 seconds
